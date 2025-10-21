@@ -1,4 +1,6 @@
 import streamlit as st
+import plotly.graph_objects as go
+import plotly.express as px
 from renta import calcular_renta_total
 
 # Configuración de la página
@@ -45,7 +47,7 @@ st.markdown("""
 st.markdown("""
 <div class="main-header">
     <h1>🧾 Calculadora de IRPF - España 2024</h1>
-    <p>Calcula tu declaración de la renta de forma fácil y rápida</p>
+    <p>Calcula tu declaración de la renta de forma fácil y visual</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -58,6 +60,7 @@ with st.expander("ℹ️ ¿Cómo funciona esta calculadora?"):
     - ✅ Deducciones por hijos, vivienda, donaciones y maternidad
     - ✅ Reducción del 60% en alquileres de vivienda
     - ✅ Cálculo real con retenciones (saber si pagas o devuelves)
+    - ✅ **NUEVO:** Gráficos interactivos y visualización profesional
     
     **⚠️ Nota:** Esta es una herramienta orientativa. Para casos complejos, consulta con un asesor fiscal.
     """)
@@ -194,10 +197,144 @@ if st.button("🧮 CALCULAR DECLARACIÓN", type="primary", use_container_width=T
         </div>
         """, unsafe_allow_html=True)
         
-        # === RESUMEN EJECUTIVO ===
-        st.header("📊 Resumen Ejecutivo")
+        # === GRÁFICOS INTERACTIVOS ===
+        st.header("📊 Visualización Interactiva")
         
         resumen = resultado['resumen']
+        cuotas = resultado['cuotas_integras']
+        
+        # GRÁFICO 1: Comparativa Ingresos vs Impuestos vs Deducciones
+        col_graf1, col_graf2 = st.columns(2)
+        
+        with col_graf1:
+            st.subheader("💰 Desglose General")
+            
+            fig_barras = go.Figure()
+            
+            fig_barras.add_trace(go.Bar(
+                name='Ingresos Totales',
+                x=['Tu Situación'],
+                y=[resumen['base_imponible_general'] + resumen['base_imponible_ahorro']],
+                marker_color='#51cf66',
+                text=[f"{resumen['base_imponible_general'] + resumen['base_imponible_ahorro']:,.0f} €"],
+                textposition='auto',
+            ))
+            
+            fig_barras.add_trace(go.Bar(
+                name='Impuestos',
+                x=['Tu Situación'],
+                y=[resultado['cuotas_liquidas']['total']],
+                marker_color='#ff6b6b',
+                text=[f"{resultado['cuotas_liquidas']['total']:,.0f} €"],
+                textposition='auto',
+            ))
+            
+            fig_barras.add_trace(go.Bar(
+                name='Deducciones',
+                x=['Tu Situación'],
+                y=[resultado['deducciones']['total_estatal'] + resultado['deducciones']['total_autonomica']],
+                marker_color='#4dabf7',
+                text=[f"{resultado['deducciones']['total_estatal'] + resultado['deducciones']['total_autonomica']:,.0f} €"],
+                textposition='auto',
+            ))
+            
+            fig_barras.update_layout(
+                barmode='group',
+                height=400,
+                showlegend=True,
+                hovermode='x unified'
+            )
+            
+            st.plotly_chart(fig_barras, use_container_width=True)
+        
+        with col_graf2:
+            st.subheader("🥧 Distribución de Impuestos")
+            
+            fig_pastel = go.Figure(data=[go.Pie(
+                labels=['Cuota Estatal', 'Cuota Autonómica', 'Retenciones Ya Pagadas'],
+                values=[
+                    cuotas['estatal_total'],
+                    cuotas['autonomica_total'],
+                    cuota_dif['retenciones']
+                ],
+                marker=dict(colors=['#667eea', '#764ba2', '#51cf66']),
+                hole=0.4,
+                textinfo='label+percent+value',
+                texttemplate='%{label}<br>%{value:,.0f} €<br>(%{percent})',
+            )])
+            
+            fig_pastel.update_layout(
+                height=400,
+                showlegend=True
+            )
+            
+            st.plotly_chart(fig_pastel, use_container_width=True)
+        
+        # GRÁFICO 2: Tramos Progresivos (solo si hay impuestos)
+        if cuotas['estatal_general'] > 0:
+            st.subheader("📈 Tu Progresión por Tramos Impositivos")
+            
+            tramos_data = []
+            for tramo in cuotas['desglose_estatal_general']:
+                tramos_data.append({
+                    'Tramo': f"{tramo['base']:,.0f} €",
+                    'Tipo': f"{tramo['tipo']*100:.1f}%",
+                    'Base': tramo['base'],
+                    'Cuota': tramo['cuota']
+                })
+            
+            fig_tramos = go.Figure()
+            
+            # Barras de base imponible por tramo
+            fig_tramos.add_trace(go.Bar(
+                name='Base en cada tramo',
+                x=[t['Tramo'] for t in tramos_data],
+                y=[t['Base'] for t in tramos_data],
+                marker_color='#4dabf7',
+                text=[f"{t['Base']:,.0f} €" for t in tramos_data],
+                textposition='auto',
+                hovertemplate='<b>%{x}</b><br>Base: %{y:,.2f} €<extra></extra>'
+            ))
+            
+            # Línea de cuota resultante
+            fig_tramos.add_trace(go.Scatter(
+                name='Impuesto en cada tramo',
+                x=[t['Tramo'] for t in tramos_data],
+                y=[t['Cuota'] for t in tramos_data],
+                mode='lines+markers+text',
+                line=dict(color='#ff6b6b', width=3),
+                marker=dict(size=10),
+                text=[f"{t['Cuota']:,.0f} €" for t in tramos_data],
+                textposition='top center',
+                yaxis='y2',
+                hovertemplate='<b>%{x}</b><br>Impuesto: %{y:,.2f} €<extra></extra>'
+            ))
+            
+            fig_tramos.update_layout(
+                height=400,
+                xaxis_title="Tramos",
+                yaxis_title="Base Imponible (€)",
+                yaxis2=dict(
+                    title="Cuota Impuesto (€)",
+                    overlaying='y',
+                    side='right'
+                ),
+                hovermode='x unified',
+                showlegend=True
+            )
+            
+            st.plotly_chart(fig_tramos, use_container_width=True)
+            
+            st.info(f"""
+            💡 **Interpretación:** 
+            - Las barras azules muestran cuánto de tu base imponible cae en cada tramo
+            - La línea roja muestra el impuesto que pagas en cada tramo
+            - Tu tipo marginal (último tramo) es **{resumen['tipo_marginal']:.2f}%**
+            - Tu tipo medio efectivo es **{resumen['tipo_medio']:.2f}%**
+            """)
+        
+        # === RESUMEN EJECUTIVO ===
+        st.header("📋 Resumen Ejecutivo")
         
         col_res1, col_res2, col_res3 = st.columns(3)
         
@@ -246,24 +383,6 @@ if st.button("🧮 CALCULAR DECLARACIÓN", type="primary", use_container_width=T
             if mpf['descendientes'] > 0:
                 st.write(f"- Mínimo por {mpf['total_hijos']} hijo(s): **{mpf['descendientes']:,.2f} €**")
             st.write(f"- **Total exento: {mpf['total']:,.2f} €**")
-        
-        # === TRAMOS IMPOSITIVOS ===
-        with st.expander("🧮 Ver cálculo por tramos impositivos"):
-            st.write("**El IRPF es progresivo: cada tramo de ingresos tributa a un tipo diferente.**")
-            
-            cuotas = resultado['cuotas_integras']
-            
-            if cuotas['estatal_general'] > 0:
-                st.subheader("📊 Parte ESTATAL (50%)")
-                for tramo in cuotas['desglose_estatal_general']:
-                    st.write(f"- Sobre **{tramo['base']:,.2f} €** al **{tramo['tipo']*100:.2f}%** = {tramo['cuota']:,.2f} €")
-                st.write(f"**Subtotal estatal: {cuotas['estatal_general']:,.2f} €**")
-            
-            if cuotas['autonomica_general'] > 0:
-                st.subheader(f"📊 Parte AUTONÓMICA - {comunidad} (50%)")
-                for tramo in cuotas['desglose_autonomico_general']:
-                    st.write(f"- Sobre **{tramo['base']:,.2f} €** al **{tramo['tipo']*100:.2f}%** = {tramo['cuota']:,.2f} €")
-                st.write(f"**Subtotal autonómico: {cuotas['autonomica_general']:,.2f} €**")
         
         # === RECOMENDACIONES ===
         with st.expander("💡 Ver recomendaciones personalizadas"):
