@@ -1,54 +1,256 @@
 import streamlit as st
 import plotly.graph_objects as go
-import plotly.express as px
 from renta import calcular_renta_total
-from io import BytesIO
 from datetime import datetime
 
-# Configuración de la página
 st.set_page_config(
-    page_title="Calculadora IRPF España 2024",
-    page_icon="🧾",
-    layout="wide"
+    page_title="TaxCalc Pro - Calculadora IRPF Profesional",
+    page_icon="💼",
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
-# CSS personalizado
+# CSS (mismo diseño oscuro minimalista)
 st.markdown("""
 <style>
-    .main-header {
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    :root {
+        --bg-dark: #1a1d29;
+        --bg-medium: #252837;
+        --text-light: #e2e8f0;
+        --text-medium: #94a3b8;
+        --accent: #3b82f6;
+        --accent-hover: #2563eb;
+    }
+    
+    .main {
+        font-family: 'Inter', sans-serif;
+        background: var(--bg-dark);
+        color: var(--text-light);
+    }
+    
+    .block-container {
+        padding: 2rem;
+        max-width: 1400px;
+        background: var(--bg-dark);
+    }
+    
+    .hero-header {
+        background: var(--bg-medium);
+        padding: 3rem 2rem;
+        border-radius: 12px;
         text-align: center;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 30px;
-        border-radius: 10px;
-        margin-bottom: 30px;
+        color: var(--text-light);
+        margin-bottom: 2rem;
+        border: 1px solid rgba(59, 130, 246, 0.2);
     }
-    .resultado-box {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 30px;
-        border-radius: 10px;
+    
+    .hero-header h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        color: var(--text-light);
+    }
+    
+    .hero-header p {
+        font-size: 1.1rem;
+        color: var(--text-medium);
+    }
+    
+    [data-testid="stExpander"] {
+        background: transparent !important;
+        border: 1px solid rgba(59, 130, 246, 0.3);
+        border-radius: 8px;
+        margin-bottom: 1rem;
+    }
+    
+    .streamlit-expanderHeader {
+        background: var(--bg-medium) !important;
+        color: var(--text-light) !important;
+        border-radius: 8px;
+        font-weight: 600;
+        padding: 1rem;
+    }
+    
+    .streamlit-expanderHeader:hover {
+        background: rgba(59, 130, 246, 0.1) !important;
+    }
+    
+    .streamlit-expanderContent {
+        background: var(--bg-medium);
+        padding: 1.5rem;
+        border-radius: 0 0 8px 8px;
+    }
+    
+    .seccion-titulo {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-light);
+        margin: 1.5rem 0 1rem 0;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid rgba(59, 130, 246, 0.3);
+    }
+    
+    .resultado-hero {
+        background: var(--bg-medium);
+        padding: 3rem;
+        border-radius: 12px;
         text-align: center;
-        margin: 20px 0;
+        color: var(--text-light);
+        margin: 2rem 0;
+        border: 1px solid rgba(59, 130, 246, 0.3);
     }
-    .optimizador-box {
-        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    
+    .resultado-monto {
+        font-size: 4rem;
+        font-weight: 800;
+        margin: 1rem 0;
+        color: var(--text-light);
+    }
+    
+    .resultado-badge {
+        display: inline-block;
+        padding: 0.75rem 2rem;
+        background: var(--accent);
+        border-radius: 8px;
+        font-size: 1.1rem;
+        font-weight: 600;
         color: white;
-        padding: 20px;
-        border-radius: 10px;
-        margin: 20px 0;
     }
-    .ahorro-potencial {
-        font-size: 36px;
-        font-weight: bold;
-        color: #51cf66;
+    
+    .stButton > button {
+        background: var(--accent);
+        color: white;
+        border: none;
+        padding: 0.875rem 2rem;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 1rem;
+        transition: all 0.2s ease;
+        width: 100%;
+    }
+    
+    .stButton > button:hover {
+        background: var(--accent-hover);
+        transform: translateY(-1px);
+    }
+    
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 0.5rem;
+        background: transparent;
+        border-bottom: 1px solid rgba(59, 130, 246, 0.3);
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        padding: 0.875rem 1.5rem;
+        border-radius: 8px 8px 0 0;
+        font-weight: 500;
+        color: var(--text-medium);
+        background: transparent;
+    }
+    
+    .stTabs [aria-selected="true"] {
+        background: var(--accent);
+        color: white;
+    }
+    
+    [data-testid="stMetricValue"] {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--text-light);
+    }
+    
+    [data-testid="stMetricLabel"] {
+        font-size: 0.875rem;
+        color: var(--text-medium);
+    }
+    
+    [data-testid="metric-container"] {
+        background: var(--bg-medium);
+        padding: 1rem;
+        border-radius: 8px;
+        border: 1px solid rgba(59, 130, 246, 0.2);
+    }
+    
+    .progress-container {
+        display: flex;
+        justify-content: space-between;
+        margin: 2rem 0;
+        padding: 1.5rem;
+        background: var(--bg-medium);
+        border-radius: 12px;
+        border: 1px solid rgba(59, 130, 246, 0.2);
+    }
+    
+    .progress-step {
+        flex: 1;
+        text-align: center;
+        color: var(--text-medium);
+        font-weight: 500;
+        position: relative;
+    }
+    
+    section[data-testid="stSidebar"] {
+        background: var(--bg-medium);
+        border-right: 1px solid rgba(59, 130, 246, 0.2);
+    }
+    
+    section[data-testid="stSidebar"] .stMarkdown {
+        color: var(--text-light);
+    }
+    
+    .stNumberInput input,
+    .stTextInput input,
+    .stTextArea textarea,
+    .stSelectbox select {
+        background: var(--bg-dark) !important;
+        border: 1px solid rgba(59, 130, 246, 0.3) !important;
+        border-radius: 8px !important;
+        color: var(--text-light) !important;
+        padding: 0.625rem !important;
+    }
+    
+    .stNumberInput input:focus,
+    .stTextInput input:focus,
+    .stSelectbox select:focus {
+        border-color: var(--accent) !important;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+    }
+    
+    label {
+        color: var(--text-light) !important;
+        font-weight: 500 !important;
+    }
+    
+    .stAlert {
+        background: var(--bg-medium) !important;
+        border-radius: 8px !important;
+        border-left: 3px solid var(--accent) !important;
+        color: var(--text-light) !important;
+        padding: 1rem !important;
+    }
+    
+    .stCheckbox label, .stRadio label {
+        color: var(--text-light) !important;
+    }
+    
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    
+    p, span, div {
+        color: var(--text-light);
+    }
+    
+    .caption, small {
+        color: var(--text-medium) !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# Función para generar HTML del PDF
+# Funciones auxiliares
 def generar_html_pdf(resultado, datos):
-    """Genera HTML formateado para exportar como PDF"""
     cuota_dif = resultado['cuota_diferencial']
     resumen = resultado['resumen']
     
@@ -57,717 +259,709 @@ def generar_html_pdf(resultado, datos):
     <head>
         <meta charset="UTF-8">
         <style>
-            body {{ font-family: Arial, sans-serif; margin: 40px; }}
-            .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                       color: white; padding: 30px; text-align: center; border-radius: 10px; }}
-            .resultado {{ font-size: 48px; font-weight: bold; margin: 20px 0; }}
-            table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
-            th, td {{ border: 1px solid #ddd; padding: 12px; text-align: left; }}
-            th {{ background-color: #667eea; color: white; }}
-            .seccion {{ margin-top: 30px; page-break-inside: avoid; }}
-            h2 {{ color: #667eea; border-bottom: 2px solid #667eea; padding-bottom: 10px; }}
+            body {{ font-family: 'Inter', Arial, sans-serif; margin: 40px; background: #1a1d29; color: #e2e8f0; }}
+            .header {{ background: #252837; color: #e2e8f0; padding: 40px; text-align: center; border-radius: 12px; }}
+            .resultado {{ font-size: 52px; font-weight: 800; margin: 20px 0; }}
+            table {{ width: 100%; border-collapse: collapse; margin: 20px 0; background: #252837; }}
+            th, td {{ border-bottom: 1px solid rgba(59, 130, 246, 0.3); padding: 16px; color: #e2e8f0; }}
+            th {{ background-color: #3b82f6; color: white; }}
         </style>
     </head>
     <body>
         <div class="header">
-            <h1>🧾 Declaración de la Renta {datetime.now().year}</h1>
-            <div class="resultado">
-                {cuota_dif['resultado']}: {cuota_dif['importe']:,.2f} €
-            </div>
-            <p>Generado el {datetime.now().strftime('%d/%m/%Y %H:%M')}</p>
+            <h1>💼 TaxCalc Pro - Informe {datetime.now().year}</h1>
+            <div class="resultado">{cuota_dif['resultado']}: {cuota_dif['importe']:,.2f} €</div>
         </div>
-        
-        <div class="seccion">
-            <h2>📊 Resumen Ejecutivo</h2>
-            <table>
-                <tr><th>Concepto</th><th>Importe</th></tr>
-                <tr><td>Base Imponible General</td><td>{resumen['base_imponible_general']:,.2f} €</td></tr>
-                <tr><td>Base Imponible Ahorro</td><td>{resumen['base_imponible_ahorro']:,.2f} €</td></tr>
-                <tr><td>Cuota Íntegra</td><td>{resultado['cuotas_integras']['total']:,.2f} €</td></tr>
-                <tr><td>Deducciones</td><td>{resultado['deducciones']['total_estatal'] + resultado['deducciones']['total_autonomica']:,.2f} €</td></tr>
-                <tr><td>Cuota Líquida</td><td>{resultado['cuotas_liquidas']['total']:,.2f} €</td></tr>
-                <tr><td>Retenciones Practicadas</td><td>{cuota_dif['retenciones']:,.2f} €</td></tr>
-                <tr style="background: #f0f0f0; font-weight: bold;">
-                    <td>RESULTADO FINAL</td>
-                    <td>{cuota_dif['resultado']}: {cuota_dif['importe']:,.2f} €</td>
-                </tr>
-            </table>
-        </div>
-        
-        <div class="seccion">
-            <h2>💡 Tipos Impositivos</h2>
-            <p><strong>Tipo Medio Efectivo:</strong> {resumen['tipo_medio']:.2f}%</p>
-            <p><strong>Tipo Marginal:</strong> {resumen['tipo_marginal']:.2f}%</p>
-        </div>
-        
-        <div class="seccion">
-            <h2>👤 Datos Personales</h2>
-            <table>
-                <tr><td>Comunidad Autónoma</td><td>{datos['comunidad']}</td></tr>
-                <tr><td>Estado Civil</td><td>{datos['estado_civil']}</td></tr>
-                <tr><td>Edad</td><td>{datos['edad']} años</td></tr>
-                <tr><td>Hijos menores de 3 años</td><td>{datos['hijos_menores_3']}</td></tr>
-                <tr><td>Hijos mayores de 3 años</td><td>{datos['hijos_mayores_3']}</td></tr>
-            </table>
-        </div>
-        
-        <div class="seccion">
-            <h2>💰 Desglose de Ingresos</h2>
-            <table>
-                <tr><th>Concepto</th><th>Importe</th></tr>
-                <tr><td>Salario Bruto</td><td>{resultado['rendimiento_trabajo']['bruto']:,.2f} €</td></tr>
-                <tr><td>Rendimiento Trabajo Neto</td><td>{resultado['rendimiento_trabajo']['neto']:,.2f} €</td></tr>
-                <tr><td>Rendimiento Capital Inmobiliario</td><td>{resultado['rendimiento_capital_inmobiliario']['neto_final']:,.2f} €</td></tr>
-                <tr><td>Rendimiento Capital Mobiliario</td><td>{resultado['rendimiento_capital_mobiliario']['total']:,.2f} €</td></tr>
-                <tr><td>Ganancias Patrimoniales</td><td>{resultado['ganancias_patrimoniales']['total']:,.2f} €</td></tr>
-            </table>
-        </div>
-        
-        <div class="seccion">
-            <h2>🧮 Cálculo por Tramos (Parte Estatal)</h2>
-            <table>
-                <tr><th>Base del Tramo</th><th>Tipo</th><th>Cuota</th></tr>
-    """
-    
-    for tramo in resultado['cuotas_integras']['desglose_estatal_general']:
-        html += f"""
-                <tr>
-                    <td>{tramo['base']:,.2f} €</td>
-                    <td>{tramo['tipo']*100:.2f}%</td>
-                    <td>{tramo['cuota']:,.2f} €</td>
-                </tr>
-        """
-    
-    html += """
-            </table>
-        </div>
-        
-        <div class="seccion" style="margin-top: 50px; text-align: center; color: #666; font-size: 12px;">
-            <p>⚠️ Esta calculadora es orientativa. Para casos complejos, consulta con un asesor fiscal profesional.</p>
-            <p>📅 Cálculos basados en normativa IRPF 2024</p>
-        </div>
+        <table>
+            <tr><th>Concepto</th><th>Importe</th></tr>
+            <tr><td>Base Imponible</td><td>{resumen['base_imponible_general']:,.2f} €</td></tr>
+            <tr><td>Cuota Líquida</td><td>{resultado['cuotas_liquidas']['total']:,.2f} €</td></tr>
+            <tr><td>Retenciones</td><td>{cuota_dif['total_pagado']:,.2f} €</td></tr>
+            <tr><td><b>RESULTADO</b></td><td><b>{cuota_dif['importe']:,.2f} €</b></td></tr>
+        </table>
     </body>
     </html>
     """
     return html
 
-# Función para optimizar fiscalmente
 def calcular_optimizaciones(datos, resultado):
-    """Analiza y sugiere optimizaciones fiscales"""
     optimizaciones = []
     ahorro_total = 0
     resumen = resultado['resumen']
     tipo_medio = resumen['tipo_medio'] / 100
     
-    # 1. Plan de pensiones
-    if datos['plan_pensiones'] < 1500 and resumen['base_imponible_general'] > 15000:
-        margen = 1500 - datos['plan_pensiones']
+    if datos.get('plan_pensiones', 0) < 1500 and resumen['base_imponible_general'] > 15000:
+        margen = 1500 - datos.get('plan_pensiones', 0)
         ahorro = margen * tipo_medio
         optimizaciones.append({
-            'tipo': '🏦 Plan de Pensiones',
+            'icono': '🏦',
+            'titulo': 'Plan de Pensiones',
             'accion': f"Aportar {margen:,.0f} € más",
-            'ahorro': ahorro,
-            'detalle': f"Aprovecha el límite máximo de 1.500€/año. Por cada 100€ que aportes, ahorras {tipo_medio*100:.1f}€ en impuestos."
+            'ahorro': ahorro
         })
         ahorro_total += ahorro
     
-    # 2. Donaciones
-    if datos['donaciones'] == 0 and resumen['base_imponible_general'] > 20000:
-        donacion_sugerida = 150
-        ahorro = donacion_sugerida * 0.80  # 80% primeros 150€
+    if datos.get('donaciones', 0) < 150 and resumen['base_imponible_general'] > 20000:
+        donacion_sugerida = 150 - datos.get('donaciones', 0)
+        ahorro = donacion_sugerida * 0.80
         optimizaciones.append({
-            'tipo': '❤️ Donaciones',
-            'accion': f"Donar {donacion_sugerida}€ a ONGs",
-            'ahorro': ahorro,
-            'detalle': "Los primeros 150€ en donaciones tienen una deducción del 80%. Ayudas y ahorras impuestos."
+            'icono': '❤️',
+            'titulo': 'Donaciones',
+            'accion': f"Donar {donacion_sugerida:,.0f} €",
+            'ahorro': ahorro
         })
         ahorro_total += ahorro
-    
-    # 3. Gastos alquiler
-    if datos['alquiler_ingresos'] > 0 and datos['alquiler_gastos'] < datos['alquiler_ingresos'] * 0.2:
-        gasto_estimado = datos['alquiler_ingresos'] * 0.25
-        ahorro_base = (gasto_estimado - datos['alquiler_gastos']) * 0.4  # 40% de lo que no se reduce al 60%
-        ahorro = ahorro_base * tipo_medio
-        optimizaciones.append({
-            'tipo': '🏠 Gastos de Alquiler',
-            'accion': f"Revisar gastos deducibles",
-            'ahorro': ahorro,
-            'detalle': "IBI, comunidad, seguros, reparaciones... El 60% del rendimiento neto está exento. Asegúrate de incluir todos los gastos."
-        })
-        ahorro_total += ahorro
-    
-    # 4. Maternidad
-    if datos['hijos_menores_3'] > 0 and not datos['maternidad'] and datos['salario'] > 0:
-        ahorro = datos['hijos_menores_3'] * 1200
-        optimizaciones.append({
-            'tipo': '👶 Deducción por Maternidad',
-            'accion': "Activar deducción maternal",
-            'ahorro': ahorro,
-            'detalle': f"Si eres madre trabajadora con hijos menores de 3 años, puedes deducir 1.200€ por cada hijo."
-        })
-        ahorro_total += ahorro
-    
-    # 5. Vivienda habitual (si aplica)
-    if not datos['vivienda_habitual'] and resumen['base_imponible_general'] > 25000:
-        optimizaciones.append({
-            'tipo': '🏠 Vivienda Habitual',
-            'accion': "Verificar si aplica deducción",
-            'ahorro': 0,
-            'detalle': "Si compraste tu vivienda antes de 2013, podrías deducir hasta 1.356€/año. Verifica tus fechas."
-        })
     
     return optimizaciones, ahorro_total
 
-# Título principal
-st.markdown("""
-<div class="main-header">
-    <h1>🧾 Calculadora de IRPF - España 2024</h1>
-    <p>Calcula, simula y optimiza tu declaración de la renta</p>
-</div>
-""", unsafe_allow_html=True)
+if 'historial_calculos' not in st.session_state:
+    st.session_state.historial_calculos = []
 
-# Tabs para organizar funcionalidades
-tab1, tab2 = st.tabs(["📝 Calculadora Principal", "🎯 Simulador Interactivo"])
+# SIDEBAR
+with st.sidebar:
+    st.markdown("### 💼 TaxCalc Pro")
+    st.caption("Calculadora IRPF Profesional")
+    st.markdown("---")
+    
+    menu = st.radio(
+        "Navegación",
+        ["🏠 Calculadora", "📊 Simulador", "📈 Historial", "💡 Guía"],
+        label_visibility="collapsed"
+    )
+    
+    st.markdown("---")
+    st.markdown("### 📌 Tips Rápidos")
+    st.info("💡 Guarda certificados")
+    st.info("✅ Revisa deducciones CCAA")
+    st.info("⏰ Campaña: Abril-Junio")
 
-with tab1:
-    # Información inicial
-    with st.expander("ℹ️ ¿Cómo funciona esta calculadora?"):
-        st.write("""
-        Esta calculadora te ayuda a estimar tu declaración de la renta aplicando:
-        - ✅ Escalas impositivas estatales y autonómicas 2024
-        - ✅ Mínimos personales y familiares
-        - ✅ Deducciones por hijos, vivienda, donaciones y maternidad
-        - ✅ Reducción del 60% en alquileres de vivienda
-        - ✅ Cálculo real con retenciones (saber si pagas o devuelves)
-        - ✅ **Gráficos interactivos** y visualización profesional
-        - ✅ **Optimizador fiscal** que detecta ahorros potenciales
-        - ✅ **Exportar PDF** con tu informe completo
+# CONTENIDO PRINCIPAL
+if menu == "🏠 Calculadora":
+    st.markdown("""
+    <div class="hero-header">
+        <h1>💼 TaxCalc Pro</h1>
+        <p>Calculadora profesional IRPF 2024 - Versión completa</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("""
+    <div class="progress-container">
+        <div class="progress-step active">
+            <div style="font-size: 1.75rem;">👤</div>
+            <div style="font-weight: 600; margin-top: 0.5rem; font-size: 0.9rem;">Personales</div>
+        </div>
+        <div class="progress-step">
+            <div style="font-size: 1.75rem;">💰</div>
+            <div style="font-weight: 600; margin-top: 0.5rem; font-size: 0.9rem;">Ingresos</div>
+        </div>
+        <div class="progress-step">
+            <div style="font-size: 1.75rem;">📉</div>
+            <div style="font-weight: 600; margin-top: 0.5rem; font-size: 0.9rem;">Deducciones</div>
+        </div>
+        <div class="progress-step">
+            <div style="font-size: 1.75rem;">🎯</div>
+            <div style="font-weight: 600; margin-top: 0.5rem; font-size: 0.9rem;">Resultado</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # PASO 1: DATOS PERSONALES
+    with st.expander("👤 PASO 1: Datos Personales", expanded=True):
+        col1, col2 = st.columns(2)
         
-        **⚠️ Nota:** Esta es una herramienta orientativa. Para casos complejos, consulta con un asesor fiscal.
-        """)
+        with col1:
+            comunidad = st.selectbox(
+                "📍 Comunidad Autónoma",
+                ["Selecciona tu comunidad", "Andalucía", "Aragón", "Asturias", "Baleares", "Canarias",
+                 "Cantabria", "Castilla y León", "Castilla-La Mancha", "Cataluña",
+                 "Comunidad Valenciana", "Extremadura", "Galicia", "Madrid",
+                 "Murcia", "Navarra", "País Vasco", "La Rioja", "Ceuta", "Melilla"],
+                help="Importante: cada comunidad tiene deducciones específicas"
+            )
+            
+            estado_civil = st.selectbox(
+                "💍 Estado civil",
+                ["Selecciona", "Soltero/a", "Casado/a (declaración conjunta)",
+                 "Casado/a (declaración individual)", "Viudo/a", "Divorciado/a"]
+            )
+            
+            edad = st.number_input("🎂 Edad", min_value=18, max_value=100, value=30)
 
-    # Formulario en columnas
-    st.markdown("---")
-    st.header("📝 Introduce tus datos")
+        with col2:
+            discapacidad = st.checkbox("♿ Certificado de discapacidad")
+            if discapacidad:
+                grado_discapacidad = st.number_input("Grado (%)", min_value=33, max_value=100, value=33)
+            else:
+                grado_discapacidad = 0
+            
+            familia_numerosa = st.checkbox("👨‍👩‍👧‍👦 Familia numerosa")
+            if familia_numerosa:
+                familia_numerosa_especial = st.checkbox("Familia numerosa especial (≥5 hijos)")
+            else:
+                familia_numerosa_especial = False
 
-    # === DATOS PERSONALES ===
-    st.subheader("👤 Datos Personales")
-    col1, col2 = st.columns(2)
-
-    with col1:
-        comunidad = st.selectbox(
-            "📍 Comunidad Autónoma",
-            ["Selecciona tu comunidad", "Andalucía", "Aragón", "Asturias", "Baleares", "Canarias",
-             "Cantabria", "Castilla y León", "Castilla-La Mancha", "Cataluña",
-             "Comunidad Valenciana", "Extremadura", "Galicia", "Madrid",
-             "Murcia", "Navarra", "País Vasco", "La Rioja", "Ceuta", "Melilla"]
-        )
+        st.markdown("**👶 Descendientes:**")
+        col3, col4, col5 = st.columns(3)
+        with col3:
+            hijos_menores_3 = st.number_input("Menores de 3 años", 0, 10, 0)
+        with col4:
+            hijos_mayores_3 = st.number_input("Mayores de 3 años", 0, 10, 0)
+        with col5:
+            hijos_con_discapacidad = st.number_input("Con discapacidad", 0, 10, 0)
         
-        estado_civil = st.selectbox(
-            "💍 Estado civil",
-            ["Selecciona", "Soltero/a", "Casado/a (declaración conjunta)",
-             "Casado/a (declaración individual)", "Viudo/a", "Divorciado/a"]
-        )
-
-    with col2:
-        edad = st.number_input("🎂 Edad", min_value=18, max_value=100, value=30)
-        discapacidad = st.checkbox("♿ Tengo certificado de discapacidad (≥33%)")
-
-    st.write("**👶 Hijos a cargo:**")
-    col3, col4 = st.columns(2)
-    with col3:
-        hijos_menores_3 = st.number_input("Menores de 3 años", min_value=0, max_value=10, value=0)
-    with col4:
-        hijos_mayores_3 = st.number_input("Mayores de 3 años", min_value=0, max_value=10, value=0)
-
-    st.markdown("---")
-
-    # === INGRESOS ===
-    st.subheader("💰 Ingresos del Trabajo")
-    col5, col6 = st.columns(2)
-
-    with col5:
-        salario = st.number_input("💵 Salario bruto anual (€)", min_value=0.0, value=0.0, step=1000.0)
-    with col6:
-        retenciones = st.number_input("🧾 Retenciones IRPF practicadas (€)", min_value=0.0, value=0.0, step=100.0,
-                                      help="Mira tu nómina o certificado de la empresa")
-
-    st.subheader("🏠 Rendimientos del Capital Inmobiliario")
-    col7, col8 = st.columns(2)
-
-    with col7:
-        alquiler_ingresos = st.number_input("💶 Ingresos brutos por alquiler (€)", min_value=0.0, value=0.0, step=1000.0)
-    with col8:
-        alquiler_gastos = st.number_input("🔧 Gastos deducibles del alquiler (€)", min_value=0.0, value=0.0, step=100.0,
-                                          help="IBI, comunidad, reparaciones, intereses...")
-
-    st.subheader("📈 Otros Ingresos")
-    col9, col10 = st.columns(2)
-
-    with col9:
-        dividendos = st.number_input("💹 Dividendos e intereses (€)", min_value=0.0, value=0.0, step=100.0)
-    with col10:
-        ganancias = st.number_input("📊 Ganancias patrimoniales (€)", min_value=0.0, value=0.0, step=1000.0,
-                                    help="Venta de acciones, criptos, inmuebles...")
-
-    st.markdown("---")
-
-    # === DEDUCCIONES ===
-    st.subheader("📉 Deducciones y Reducciones")
-
-    plan_pensiones = st.number_input("🏦 Aportaciones a planes de pensiones (€)", min_value=0.0, value=0.0, step=100.0,
-                                     help="Máximo deducible: 1.500€/año")
-
-    vivienda_habitual = st.checkbox("🏠 Compré vivienda habitual antes de 2013 (deducción estatal)")
-    vivienda_importe = 0.0
-    if vivienda_habitual:
-        vivienda_importe = st.number_input("Cantidad pagada por hipoteca (€)", min_value=0.0, value=0.0, step=100.0)
-
-    donaciones = st.number_input("❤️ Donaciones (€)", min_value=0.0, value=0.0, step=50.0,
-                                 help="A ONGs, fundaciones, iglesia...")
-
-    maternidad = st.checkbox("👶 Madre trabajadora con hijos menores de 3 años (deducción 1.200€/hijo)")
-
-    st.markdown("---")
-
-    # === BOTÓN DE CÁLCULO ===
-    if st.button("🧮 CALCULAR DECLARACIÓN", type="primary", use_container_width=True):
+        nacimiento_ultimo_ano = st.checkbox("👶 Nacimiento/adopción en el último año")
         
-        # Validaciones
-        if comunidad == "Selecciona tu comunidad":
-            st.error("⚠️ Por favor, selecciona tu comunidad autónoma")
-        elif estado_civil == "Selecciona":
-            st.error("⚠️ Por favor, selecciona tu estado civil")
+        st.markdown("**👴 Ascendientes a cargo:**")
+        col6, col7 = st.columns(2)
+        with col6:
+            ascendientes_mayores_65 = st.number_input("Mayores de 65 años", 0, 5, 0)
+        with col7:
+            ascendientes_mayores_75 = st.number_input("Mayores de 75 años", 0, 5, 0)
+
+    # PASO 2: INGRESOS
+    with st.expander("💰 PASO 2: Ingresos"):
+        # Trabajo por cuenta ajena
+        st.markdown('<div class="seccion-titulo">💵 Rendimientos del Trabajo</div>', unsafe_allow_html=True)
+        col8, col9 = st.columns(2)
+        with col8:
+            salario = st.number_input("Salario bruto anual (€)", 0.0, value=0.0, step=1000.0)
+        with col9:
+            retenciones = st.number_input("Retenciones IRPF (€)", 0.0, value=0.0, step=100.0,
+                                         help="Total retenido en nómina")
+        
+        # Autónomos
+        st.markdown('<div class="seccion-titulo">🏪 Actividades Económicas (Autónomos)</div>', unsafe_allow_html=True)
+        es_autonomo = st.checkbox("💼 Soy autónomo o tengo actividad económica")
+        
+        if es_autonomo:
+            col10, col11 = st.columns(2)
+            with col10:
+                regimen_autonomo = st.selectbox(
+                    "Régimen fiscal",
+                    ["estimacion_directa_simplificada", "estimacion_directa_normal", "estimacion_objetiva"]
+                )
+                ingresos_autonomo = st.number_input("Ingresos actividad (€)", 0.0, value=0.0, step=1000.0)
+            with col11:
+                gastos_autonomo = st.number_input("Gastos deducibles (€)", 0.0, value=0.0, step=500.0)
+                pagos_fraccionados_autonomo = st.number_input("Pagos fraccionados (€)", 0.0, value=0.0, step=100.0,
+                                                              help="Modelo 130/131")
         else:
-            # Preparar datos
+            regimen_autonomo = None
+            ingresos_autonomo = 0
+            gastos_autonomo = 0
+            pagos_fraccionados_autonomo = 0
+        
+        # Inmobiliarios
+        st.markdown('<div class="seccion-titulo">🏠 Rendimientos Inmobiliarios</div>', unsafe_allow_html=True)
+        
+        alquiler_ingresos = st.number_input("Ingresos por alquiler (€)", 0.0, value=0.0, step=1000.0)
+        
+        if alquiler_ingresos > 0:
+            st.caption("💡 Puedes detallar gastos o poner total:")
+            col12, col13, col14 = st.columns(3)
+            with col12:
+                ibi = st.number_input("IBI (€)", 0.0, value=0.0, step=100.0)
+                comunidad = st.number_input("Comunidad (€)", 0.0, value=0.0, step=50.0)
+            with col13:
+                seguro_hogar = st.number_input("Seguro (€)", 0.0, value=0.0, step=50.0)
+                reparaciones = st.number_input("Reparaciones (€)", 0.0, value=0.0, step=100.0)
+            with col14:
+                intereses_hipoteca = st.number_input("Intereses hipoteca (€)", 0.0, value=0.0, step=500.0)
+                alquiler_gastos = st.number_input("Otros gastos (€)", 0.0, value=0.0, step=100.0)
+            
+            valor_construccion_alquiler = st.number_input(
+                "Valor construcción (para amortización 3%)", 0.0, value=0.0, step=10000.0,
+                help="70% del valor de compra aprox"
+            )
+            
+            arrendatario_menor_30 = st.checkbox("El inquilino tiene menos de 30 años (reducción 70%)")
+        else:
+            ibi = comunidad = seguro_hogar = reparaciones = 0
+            intereses_hipoteca = alquiler_gastos = valor_construccion_alquiler = 0
+            arrendatario_menor_30 = False
+        
+        # Segunda vivienda
+        tiene_segunda_vivienda = st.checkbox("🏘️ Tengo segunda vivienda no alquilada")
+        if tiene_segunda_vivienda:
+            col15, col16 = st.columns(2)
+            with col15:
+                valor_catastral_segunda = st.number_input("Valor catastral (€)", 0.0, value=0.0, step=10000.0)
+            with col16:
+                valor_catastral_revisado = st.checkbox("Valor catastral revisado post-1994")
+        else:
+            valor_catastral_segunda = 0
+            valor_catastral_revisado = False
+        
+        # Capital mobiliario
+        st.markdown('<div class="seccion-titulo">📈 Capital Mobiliario y Ganancias</div>', unsafe_allow_html=True)
+        col17, col18 = st.columns(2)
+        with col17:
+            dividendos = st.number_input("Dividendos (€)", 0.0, value=0.0, step=100.0)
+            intereses = st.number_input("Intereses bancarios (€)", 0.0, value=0.0, step=50.0)
+        with col18:
+            ganancias = st.number_input("Ganancias patrimoniales (€)", 0.0, value=0.0, step=500.0,
+                                       help="Venta acciones, criptos, inmuebles")
+            perdidas_patrimoniales = st.number_input("Pérdidas patrimoniales (€)", 0.0, value=0.0, step=500.0)
+        
+        perdidas_pendientes_anos_anteriores = st.number_input(
+            "Pérdidas pendientes de años anteriores (€)", 0.0, value=0.0, step=500.0,
+            help="Pérdidas de hasta 4 años atrás sin compensar"
+        )
+
+    # PASO 3: DEDUCCIONES
+    with st.expander("📉 PASO 3: Deducciones y Reducciones"):
+        st.markdown('<div class="seccion-titulo">🏦 Reducciones de la Base</div>', unsafe_allow_html=True)
+        col19, col20 = st.columns(2)
+        with col19:
+            plan_pensiones = st.number_input("Plan de pensiones (€)", 0.0, value=0.0, step=100.0,
+                                            help="Máximo: 1.500€/año")
+            if es_autonomo:
+                mutualidad = st.number_input("Mutualidad alternativa (€)", 0.0, value=0.0, step=100.0)
+            else:
+                mutualidad = 0
+        with col20:
+            pensiones_compensatorias = st.number_input("Pensiones compensatorias (€)", 0.0, value=0.0, step=100.0,
+                                                       help="A favor del cónyuge")
+        
+        st.markdown('<div class="seccion-titulo">✅ Deducciones Estatales</div>', unsafe_allow_html=True)
+        
+        vivienda_habitual = st.checkbox("🏠 Vivienda habitual (compra pre-2013)")
+        if vivienda_habitual:
+            vivienda_importe = st.number_input("Importe pagado hipoteca (€)", 0.0, value=0.0, step=100.0)
+        else:
+            vivienda_importe = 0
+        
+        col21, col22 = st.columns(2)
+        with col21:
+            donaciones = st.number_input("❤️ Donaciones (€)", 0.0, value=0.0, step=50.0)
+            if donaciones > 0:
+                donacion_plurianual = st.checkbox("Donación plurianual (3+ años)")
+            else:
+                donacion_plurianual = False
+        
+        with col22:
+            maternidad = st.checkbox("👶 Madre trabajadora (hijos <3 años)")
+        
+        st.markdown('<div class="seccion-titulo">🏘️ Deducciones Autonómicas</div>', unsafe_allow_html=True)
+        st.caption(f"Específicas de: {comunidad if comunidad != 'Selecciona tu comunidad' else 'selecciona comunidad'}")
+        
+        col23, col24 = st.columns(2)
+        with col23:
+            alquiler_vivienda_habitual_pagado = st.number_input(
+                "Alquiler vivienda habitual pagado (€/año)", 0.0, value=0.0, step=100.0,
+                help="Lo que TÚ pagas de alquiler"
+            )
+        with col24:
+            gastos_guarderia = st.number_input("Gastos guardería (€)", 0.0, value=0.0, step=100.0)
+
+    st.markdown("---")
+    
+    # BOTÓN CALCULAR
+    if st.button("🚀 CALCULAR DECLARACIÓN COMPLETA"):
+        if comunidad == "Selecciona tu comunidad":
+            st.error("⚠️ Selecciona tu comunidad autónoma")
+        elif estado_civil == "Selecciona":
+            st.error("⚠️ Selecciona tu estado civil")
+        else:
             datos = {
                 'comunidad': comunidad,
                 'estado_civil': estado_civil,
                 'edad': edad,
                 'discapacidad': discapacidad,
+                'grado_discapacidad': grado_discapacidad,
+                'familia_numerosa': familia_numerosa,
+                'familia_numerosa_especial': familia_numerosa_especial,
                 'hijos_menores_3': hijos_menores_3,
                 'hijos_mayores_3': hijos_mayores_3,
+                'hijos_con_discapacidad': hijos_con_discapacidad,
+                'nacimiento_ultimo_ano': nacimiento_ultimo_ano,
+                'ascendientes_mayores_65_a_cargo': ascendientes_mayores_65,
+                'ascendientes_mayores_75_a_cargo': ascendientes_mayores_75,
                 'salario': salario,
                 'retenciones': retenciones,
+                'es_autonomo': es_autonomo,
+                'regimen_autonomo': regimen_autonomo,
+                'ingresos_autonomo': ingresos_autonomo,
+                'gastos_autonomo': gastos_autonomo,
+                'pagos_fraccionados_autonomo': pagos_fraccionados_autonomo,
                 'alquiler_ingresos': alquiler_ingresos,
+                'ibi': ibi,
+                'comunidad': comunidad,
+                'seguro_hogar': seguro_hogar,
+                'reparaciones': reparaciones,
+                'intereses_hipoteca': intereses_hipoteca,
                 'alquiler_gastos': alquiler_gastos,
+                'valor_construccion_alquiler': valor_construccion_alquiler,
+                'arrendatario_menor_30': arrendatario_menor_30,
+                'tiene_segunda_vivienda': tiene_segunda_vivienda,
+                'valor_catastral_segunda': valor_catastral_segunda,
+                'valor_catastral_revisado': valor_catastral_revisado,
                 'dividendos': dividendos,
+                'intereses': intereses,
                 'ganancias': ganancias,
+                'perdidas_patrimoniales': perdidas_patrimoniales,
+                'perdidas_pendientes_anos_anteriores': perdidas_pendientes_anos_anteriores,
                 'plan_pensiones': plan_pensiones,
+                'mutualidad': mutualidad,
+                'pensiones_compensatorias': pensiones_compensatorias,
                 'vivienda_habitual': vivienda_habitual,
                 'vivienda_importe': vivienda_importe,
                 'donaciones': donaciones,
-                'maternidad': maternidad
+                'donacion_plurianual': donacion_plurianual,
+                'maternidad': maternidad,
+                'alquiler_vivienda_habitual_pagado': alquiler_vivienda_habitual_pagado,
+                'gastos_guarderia': gastos_guarderia
             }
             
-            # Guardar en session_state para el simulador
             st.session_state['datos_calculados'] = datos
             
-            # Calcular
-            with st.spinner('Calculando tu declaración...'):
+            with st.spinner('🔮 Calculando declaración completa...'):
                 resultado = calcular_renta_total(datos)
                 st.session_state['resultado_calculado'] = resultado
+                st.session_state.historial_calculos.append({
+                    'fecha': datetime.now(),
+                    'datos': datos,
+                    'resultado': resultado
+                })
             
             cuota_dif = resultado['cuota_diferencial']
-            
-            # RESULTADO PRINCIPAL
-            color_clase = "pagar" if cuota_dif['diferencial'] > 0 else "devolver"
             simbolo = "💸" if cuota_dif['diferencial'] > 0 else "💰"
             
             st.markdown(f"""
-            <div class="resultado-box">
-                <h1>{simbolo} RESULTADO DE TU DECLARACIÓN</h1>
-                <div class="resultado-monto {color_clase}">{cuota_dif['importe']:,.2f} €</div>
-                <h2>{cuota_dif['resultado']}</h2>
+            <div class="resultado-hero">
+                <div style="font-size: 1.1rem; color: #94a3b8; margin-bottom: 0.5rem;">Tu declaración de la renta</div>
+                <div class="resultado-monto">{cuota_dif['importe']:,.2f} €</div>
+                <div class="resultado-badge">{simbolo} {cuota_dif['resultado']}</div>
             </div>
             """, unsafe_allow_html=True)
             
-            # === OPTIMIZADOR FISCAL ===
-            st.header("💡 Optimizador Fiscal Inteligente")
+            # Avisos importantes
+            if resultado.get('avisos'):
+                for aviso in resultado['avisos']:
+                    st.warning(f"⚠️ {aviso}")
+            
+            # Optimizador
+            st.markdown('<div class="seccion-titulo">💡 Optimizador Fiscal</div>', unsafe_allow_html=True)
             
             optimizaciones, ahorro_total = calcular_optimizaciones(datos, resultado)
             
             if len(optimizaciones) > 0:
-                st.markdown(f"""
-                <div class="optimizador-box">
-                    <h2>🎯 ¡Puedes ahorrar hasta <span class="ahorro-potencial">{ahorro_total:,.2f} €</span>!</h2>
-                    <p>Hemos detectado {len(optimizaciones)} oportunidades de optimización fiscal</p>
-                </div>
-                """, unsafe_allow_html=True)
-                
+                st.info(f"🎯 **Ahorro potencial detectado:** {ahorro_total:,.0f} €")
                 for opt in optimizaciones:
-                    with st.expander(f"{opt['tipo']} - Ahorro: {opt['ahorro']:,.2f} €"):
-                        st.write(f"**Acción sugerida:** {opt['accion']}")
-                        st.write(f"**Detalle:** {opt['detalle']}")
-                        if opt['ahorro'] > 0:
-                            st.success(f"💰 Ahorro estimado: **{opt['ahorro']:,.2f} €**")
+                    st.success(f"{opt['icono']} **{opt['titulo']}:** {opt['accion']} - Ahorro: **{opt['ahorro']:,.0f} €**")
             else:
-                st.success("✅ ¡Excelente! Estás aprovechando bien las deducciones disponibles.")
+                st.success("✅ Excelente aprovechamiento de deducciones")
             
-            # === BOTÓN EXPORTAR PDF ===
+            # Exportar
             st.markdown("---")
             html_pdf = generar_html_pdf(resultado, datos)
-            
             st.download_button(
-                label="📄 Descargar Informe Completo (HTML)",
+                label="📄 Descargar Informe",
                 data=html_pdf,
-                file_name=f"declaracion_renta_{datetime.now().strftime('%Y%m%d')}.html",
-                mime="text/html",
-                use_container_width=True
+                file_name=f"TaxCalc_{datetime.now().strftime('%Y%m%d')}.html",
+                mime="text/html"
             )
             
-            st.info("💡 **Tip:** Abre el archivo HTML descargado en tu navegador y usa Ctrl+P para guardarlo como PDF")
-            
-            # === GRÁFICOS INTERACTIVOS ===
-            st.header("📊 Visualización Interactiva")
+            # Gráficos
+            st.markdown('<div class="seccion-titulo">📊 Análisis Visual</div>', unsafe_allow_html=True)
             
             resumen = resultado['resumen']
             cuotas = resultado['cuotas_integras']
             
-            # GRÁFICO 1: Comparativa Ingresos vs Impuestos vs Deducciones
-            col_graf1, col_graf2 = st.columns(2)
+            tab1, tab2, tab3 = st.tabs(["📊 Resumen", "📈 Tramos", "💰 Desglose"])
             
-            with col_graf1:
-                st.subheader("💰 Desglose General")
+            with tab1:
+                fig = go.Figure()
+                valores = [
+                    resumen['base_imponible_general'] + resumen['base_imponible_ahorro'],
+                    resultado['cuotas_liquidas']['total'],
+                    resultado['deducciones']['total_estatal'] + resultado['deducciones']['total_autonomica'],
+                    cuota_dif['total_pagado']
+                ]
                 
-                fig_barras = go.Figure()
-                
-                fig_barras.add_trace(go.Bar(
-                    name='Ingresos Totales',
-                    x=['Tu Situación'],
-                    y=[resumen['base_imponible_general'] + resumen['base_imponible_ahorro']],
-                    marker_color='#51cf66',
-                    text=[f"{resumen['base_imponible_general'] + resumen['base_imponible_ahorro']:,.0f} €"],
-                    textposition='auto',
+                fig.add_trace(go.Bar(
+                    x=['Ingresos', 'Impuestos', 'Deducciones', 'Ya Pagado'],
+                    y=valores,
+                    marker_color=['#3b82f6', '#ef4444', '#10b981', '#94a3b8'],
+                    text=[f"{v:,.0f} €" for v in valores],
+                    textposition='outside'
                 ))
                 
-                fig_barras.add_trace(go.Bar(
-                    name='Impuestos',
-                    x=['Tu Situación'],
-                    y=[resultado['cuotas_liquidas']['total']],
-                    marker_color='#ff6b6b',
-                    text=[f"{resultado['cuotas_liquidas']['total']:,.0f} €"],
-                    textposition='auto',
-                ))
-                
-                fig_barras.add_trace(go.Bar(
-                    name='Deducciones',
-                    x=['Tu Situación'],
-                    y=[resultado['deducciones']['total_estatal'] + resultado['deducciones']['total_autonomica']],
-                    marker_color='#4dabf7',
-                    text=[f"{resultado['deducciones']['total_estatal'] + resultado['deducciones']['total_autonomica']:,.0f} €"],
-                    textposition='auto',
-                ))
-                
-                fig_barras.update_layout(
-                    barmode='group',
+                fig.update_layout(
                     height=400,
-                    showlegend=True,
-                    hovermode='x unified'
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    font=dict(color='#e2e8f0'),
+                    showlegend=False,
+                    yaxis=dict(gridcolor='rgba(59, 130, 246, 0.1)')
                 )
-                
-                st.plotly_chart(fig_barras, use_container_width=True)
+                st.plotly_chart(fig, use_container_width=True)
             
-            with col_graf2:
-                st.subheader("🥧 Distribución de Impuestos")
-                
-                fig_pastel = go.Figure(data=[go.Pie(
-                    labels=['Cuota Estatal', 'Cuota Autonómica', 'Retenciones Ya Pagadas'],
-                    values=[
-                        cuotas['estatal_total'],
-                        cuotas['autonomica_total'],
-                        cuota_dif['retenciones']
-                    ],
-                    marker=dict(colors=['#667eea', '#764ba2', '#51cf66']),
-                    hole=0.4,
-                    textinfo='label+percent+value',
-                    texttemplate='%{label}<br>%{value:,.0f} €<br>(%{percent})',
-                )])
-                
-                fig_pastel.update_layout(
-                    height=400,
-                    showlegend=True
-                )
-                
-                st.plotly_chart(fig_pastel, use_container_width=True)
+            with tab2:
+                if cuotas['estatal_general'] > 0:
+                    tramos_data = []
+                    for tramo in cuotas['desglose_estatal_general']:
+                        tramos_data.append({
+                            'Tramo': f"{tramo['base']:,.0f} €",
+                            'Base': tramo['base'],
+                            'Cuota': tramo['cuota']
+                        })
+                    
+                    fig2 = go.Figure()
+                    fig2.add_trace(go.Bar(
+                        name='Base',
+                        x=[t['Tramo'] for t in tramos_data],
+                        y=[t['Base'] for t in tramos_data],
+                        marker_color='#3b82f6'
+                    ))
+                    
+                    fig2.add_trace(go.Scatter(
+                        name='Cuota',
+                        x=[t['Tramo'] for t in tramos_data],
+                        y=[t['Cuota'] for t in tramos_data],
+                        mode='lines+markers',
+                        line=dict(color='#ef4444', width=3),
+                        yaxis='y2'
+                    ))
+                    
+                    fig2.update_layout(
+                        height=400,
+                        plot_bgcolor='rgba(0,0,0,0)',
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        font=dict(color='#e2e8f0'),
+                        yaxis=dict(gridcolor='rgba(59, 130, 246, 0.1)', title='Base (€)'),
+                        yaxis2=dict(title='Cuota (€)', overlaying='y', side='right', showgrid=False)
+                    )
+                    st.plotly_chart(fig2, use_container_width=True)
+                    
+                    col_i1, col_i2 = st.columns(2)
+                    with col_i1:
+                        st.info(f"📊 **Tipo Marginal:** {resumen['tipo_marginal']:.2f}%")
+                    with col_i2:
+                        st.info(f"✅ **Tipo Medio:** {resumen['tipo_medio']:.2f}%")
             
-            # GRÁFICO 2: Tramos Progresivos
-            if cuotas['estatal_general'] > 0:
-                st.subheader("📈 Tu Progresión por Tramos Impositivos")
+            with tab3:
+                st.subheader("Desglose detallado de ingresos")
                 
-                tramos_data = []
-                for tramo in cuotas['desglose_estatal_general']:
-                    tramos_data.append({
-                        'Tramo': f"{tramo['base']:,.0f} €",
-                        'Tipo': f"{tramo['tipo']*100:.1f}%",
-                        'Base': tramo['base'],
-                        'Cuota': tramo['cuota']
-                    })
-                
-                fig_tramos = go.Figure()
-                
-                fig_tramos.add_trace(go.Bar(
-                    name='Base en cada tramo',
-                    x=[t['Tramo'] for t in tramos_data],
-                    y=[t['Base'] for t in tramos_data],
-                    marker_color='#4dabf7',
-                    text=[f"{t['Base']:,.0f} €" for t in tramos_data],
-                    textposition='auto',
-                    hovertemplate='<b>%{x}</b><br>Base: %{y:,.2f} €<extra></extra>'
-                ))
-                
-                fig_tramos.add_trace(go.Scatter(
-                    name='Impuesto en cada tramo',
-                    x=[t['Tramo'] for t in tramos_data],
-                    y=[t['Cuota'] for t in tramos_data],
-                    mode='lines+markers+text',
-                    line=dict(color='#ff6b6b', width=3),
-                    marker=dict(size=10),
-                    text=[f"{t['Cuota']:,.0f} €" for t in tramos_data],
-                    textposition='top center',
-                    yaxis='y2',
-                    hovertemplate='<b>%{x}</b><br>Impuesto: %{y:,.2f} €<extra></extra>'
-                ))
-                
-                fig_tramos.update_layout(
-                    height=400,
-                    xaxis_title="Tramos",
-                    yaxis_title="Base Imponible (€)",
-                    yaxis2=dict(
-                        title="Cuota Impuesto (€)",
-                        overlaying='y',
-                        side='right'
-                    ),
-                    hovermode='x unified',
-                    showlegend=True
-                )
-                
-                st.plotly_chart(fig_tramos, use_container_width=True)
-                
-                st.info(f"""
-                💡 **Interpretación:** 
-                - Las barras azules muestran cuánto de tu base imponible cae en cada tramo
-                - La línea roja muestra el impuesto que pagas en cada tramo
-                - Tu tipo marginal (último tramo) es **{resumen['tipo_marginal']:.2f}%**
-                - Tu tipo medio efectivo es **{resumen['tipo_medio']:.2f}%**
-                """)
-            
-            # === RESUMEN EJECUTIVO ===
-            st.header("📋 Resumen Ejecutivo")
-            
-            col_res1, col_res2, col_res3 = st.columns(3)
-            
-            with col_res1:
-                st.metric("Base Imponible General", f"{resumen['base_imponible_general']:,.2f} €")
-                st.metric("Base Imponible Ahorro", f"{resumen['base_imponible_ahorro']:,.2f} €")
-            
-            with col_res2:
-                st.metric("Cuota Íntegra", f"{resultado['cuotas_integras']['total']:,.2f} €")
-                st.metric("Deducciones", f"{resultado['deducciones']['total_estatal'] + resultado['deducciones']['total_autonomica']:,.2f} €")
-            
-            with col_res3:
-                st.metric("Cuota Líquida", f"{resultado['cuotas_liquidas']['total']:,.2f} €")
-                st.metric("Retenciones", f"{cuota_dif['retenciones']:,.2f} €")
-            
-            # Tipos impositivos
-            st.info(f"""
-            📌 **Tu tipo medio efectivo:** {resumen['tipo_medio']:.2f}%  
-            📌 **Tu tipo marginal:** {resumen['tipo_marginal']:.2f}%
-            
-            *El tipo medio es el porcentaje real que pagas. El tipo marginal es lo que pagas por cada euro adicional.*
-            """)
-            
-            # === DESGLOSE DETALLADO ===
-            with st.expander("💰 Ver desglose detallado de ingresos"):
+                # Trabajo
                 rt = resultado['rendimiento_trabajo']
                 if rt['bruto'] > 0:
-                    st.subheader("👔 Rendimientos del Trabajo")
-                    st.write(f"- Salario bruto: **{rt['bruto']:,.2f} €**")
-                    st.write(f"- Reducción por trabajo: **-{rt['reduccion']:,.2f} €**")
-                    st.write(f"- **Rendimiento neto: {rt['neto']:,.2f} €**")
+                    st.markdown("**👔 Rendimientos del Trabajo**")
+                    col_d1, col_d2, col_d3 = st.columns(3)
+                    with col_d1:
+                        st.metric("Bruto", f"{rt['bruto']:,.0f} €")
+                    with col_d2:
+                        st.metric("Reducción", f"-{rt['reduccion']:,.0f} €")
+                    with col_d3:
+                        st.metric("Neto", f"{rt['neto']:,.0f} €")
                 
+                # Autónomos
+                if es_autonomo:
+                    ra = resultado['rendimiento_actividades']
+                    st.markdown("**🏪 Actividad Económica**")
+                    col_d4, col_d5, col_d6 = st.columns(3)
+                    with col_d4:
+                        st.metric("Ingresos", f"{ra['ingresos']:,.0f} €")
+                    with col_d5:
+                        st.metric("Gastos", f"-{ra['gastos']:,.0f} €")
+                    with col_d6:
+                        st.metric("Neto", f"{ra['neto']:,.0f} €")
+                
+                # Alquileres
                 rci = resultado['rendimiento_capital_inmobiliario']
                 if rci['ingresos'] > 0:
-                    st.subheader("🏠 Rendimientos Alquileres")
-                    st.write(f"- Ingresos: **{rci['ingresos']:,.2f} €**")
-                    st.write(f"- Gastos: **-{rci['gastos']:,.2f} €**")
-                    st.write(f"- Reducción 60%: **-{rci['reduccion_60']:,.2f} €**")
-                    st.write(f"- **Rendimiento neto: {rci['neto_final']:,.2f} €**")
+                    st.markdown("**🏠 Rendimientos Inmobiliarios**")
+                    col_d7, col_d8, col_d9 = st.columns(3)
+                    with col_d7:
+                        st.metric("Ingresos", f"{rci['ingresos']:,.0f} €")
+                    with col_d8:
+                        st.metric("Gastos", f"-{rci['gastos_totales']:,.0f} €")
+                    with col_d9:
+                        st.metric("Neto", f"{rci['neto_final']:,.0f} €")
+                    
+                    with st.expander("Ver gastos detallados"):
+                        for concepto, valor in rci['gastos_detallados'].items():
+                            if valor > 0:
+                                st.write(f"• {concepto.replace('_', ' ').title()}: {valor:,.2f} €")
+                
+                # Ganancias
+                gp = resultado['ganancias_patrimoniales']
+                if gp['ganancias_brutas'] > 0 or gp['perdidas_ejercicio'] > 0:
+                    st.markdown("**📈 Ganancias Patrimoniales**")
+                    col_d10, col_d11, col_d12 = st.columns(3)
+                    with col_d10:
+                        st.metric("Ganancias", f"{gp['ganancias_brutas']:,.0f} €")
+                    with col_d11:
+                        st.metric("Pérdidas", f"-{gp['perdidas_ejercicio']:,.0f} €")
+                    with col_d12:
+                        st.metric("Neto", f"{gp['ganancias_final']:,.0f} €")
             
-            # === MÍNIMO PERSONAL Y FAMILIAR ===
-            with st.expander("👨‍👩‍👧‍👦 Ver mínimo personal y familiar"):
-                mpf = resultado['minimo_personal_familiar']
-                st.info("El mínimo personal y familiar es la cantidad que NO tributa porque se considera mínimo vital.")
-                st.write(f"- Mínimo del contribuyente: **{mpf['contribuyente']:,.2f} €**")
-                if mpf['descendientes'] > 0:
-                    st.write(f"- Mínimo por {mpf['total_hijos']} hijo(s): **{mpf['descendientes']:,.2f} €**")
-                st.write(f"- **Total exento: {mpf['total']:,.2f} €**")
+            # Métricas clave
+            st.markdown('<div class="seccion-titulo">📋 Métricas Clave</div>', unsafe_allow_html=True)
+            
+            col_m1, col_m2, col_m3, col_m4 = st.columns(4)
+            
+            with col_m1:
+                st.metric("Base Imponible", f"{resumen['base_imponible_general']:,.0f} €")
+            with col_m2:
+                st.metric("Cuota Íntegra", f"{cuotas['total']:,.0f} €")
+            with col_m3:
+                deducciones_total = resultado['deducciones']['total_estatal'] + resultado['deducciones']['total_autonomica']
+                st.metric("Deducciones", f"{deducciones_total:,.0f} €")
+            with col_m4:
+                st.metric("Ya Pagado", f"{cuota_dif['total_pagado']:,.0f} €")
 
-# TAB 2: SIMULADOR INTERACTIVO
-with tab2:
-    st.header("🎯 Simulador Interactivo 'Qué pasaría si...'")
+elif menu == "📊 Simulador":
+    st.markdown("""
+    <div class="hero-header">
+        <h1>📊 Simulador Interactivo</h1>
+        <p>Compara escenarios fiscales</p>
+    </div>
+    """, unsafe_allow_html=True)
     
-    st.info("""
-    **¿Cómo funciona?**  
-    Primero calcula tu declaración en la pestaña principal. Luego vuelve aquí para simular diferentes escenarios 
-    y ver cómo afectan cambios en tu salario, deducciones o situación familiar.
-    """)
-    
-    if 'datos_calculados' not in st.session_state or 'resultado_calculado' not in st.session_state:
-        st.warning("⚠️ Primero calcula tu declaración en la pestaña 'Calculadora Principal'")
+    if 'datos_calculados' not in st.session_state:
+        st.info("⚠️ Primero calcula tu declaración en 'Calculadora'")
     else:
         datos_base = st.session_state['datos_calculados']
         resultado_base = st.session_state['resultado_calculado']
+        cuota_base = resultado_base['cuota_diferencial']
         
-        st.success(f"""
-        **Escenario Base (tu situación actual):**  
-        Resultado: **{resultado_base['cuota_diferencial']['resultado']}** - **{resultado_base['cuota_diferencial']['importe']:,.2f} €**
-        """)
+        st.info(f"📌 **Escenario Base:** {cuota_base['resultado']} - **{cuota_base['importe']:,.2f} €**")
         
         st.markdown("---")
-        st.subheader("🔧 Ajusta los parámetros para simular")
+        st.subheader("🎛️ Ajusta parámetros")
         
         col_sim1, col_sim2 = st.columns(2)
         
         with col_sim1:
-            st.write("**💰 Ingresos**")
+            st.markdown("### 💰 Ingresos")
             salario_sim = st.slider(
-                "Salario anual (€)",
-                min_value=0,
-                max_value=int(datos_base['salario'] * 2) if datos_base['salario'] > 0 else 100000,
-                value=int(datos_base['salario']),
-                step=1000
-            )
-            
-            alquiler_sim = st.slider(
-                "Ingresos por alquiler (€)",
-                min_value=0,
-                max_value=int(datos_base['alquiler_ingresos'] * 2) if datos_base['alquiler_ingresos'] > 0 else 50000,
-                value=int(datos_base['alquiler_ingresos']),
-                step=1000
+                "💵 Salario",
+                0,
+                max(int(datos_base.get('salario', 0) * 2), 100000),
+                int(datos_base.get('salario', 0)),
+                1000
             )
         
         with col_sim2:
-            st.write("**📉 Deducciones**")
-            pension_sim = st.slider(
-                "Plan de pensiones (€)",
-                min_value=0,
-                max_value=1500,
-                value=int(datos_base['plan_pensiones']),
-                step=100
-            )
-            
-            donaciones_sim = st.slider(
-                "Donaciones (€)",
-                min_value=0,
-                max_value=5000,
-                value=int(datos_base['donaciones']),
-                step=50
-            )
+            st.markdown("### 📉 Deducciones")
+            pension_sim = st.slider("🏦 Plan pensiones", 0, 1500, int(datos_base.get('plan_pensiones', 0)), 100)
         
-        st.markdown("---")
-        
-        if st.button("🔄 SIMULAR NUEVO ESCENARIO", type="primary", use_container_width=True):
-            # Crear datos simulados
+        if st.button("🔄 SIMULAR"):
             datos_sim = datos_base.copy()
             datos_sim['salario'] = salario_sim
-            datos_sim['alquiler_ingresos'] = alquiler_sim
             datos_sim['plan_pensiones'] = pension_sim
-            datos_sim['donaciones'] = donaciones_sim
             
-            # Calcular nuevo escenario
-            with st.spinner('Simulando nuevo escenario...'):
+            with st.spinner('🔮 Simulando...'):
                 resultado_sim = calcular_renta_total(datos_sim)
             
-            cuota_base = resultado_base['cuota_diferencial']
             cuota_sim = resultado_sim['cuota_diferencial']
-            
-            # COMPARACIÓN LADO A LADO
-            st.header("📊 Comparación de Escenarios")
+            diferencia = cuota_sim['importe'] - cuota_base['importe']
             
             col_comp1, col_comp2, col_comp3 = st.columns(3)
             
             with col_comp1:
-                st.markdown("### 📌 Escenario BASE")
-                st.metric("Resultado", f"{cuota_base['importe']:,.2f} €")
-                st.write(f"**{cuota_base['resultado']}**")
-            
+                st.metric("Base", f"{cuota_base['importe']:,.0f} €")
             with col_comp2:
-                st.markdown("### 🔮 Escenario SIMULADO")
-                st.metric("Resultado", f"{cuota_sim['importe']:,.2f} €")
-                st.write(f"**{cuota_sim['resultado']}**")
-            
+                st.metric("Simulado", f"{cuota_sim['importe']:,.0f} €")
             with col_comp3:
-                st.markdown("### 📈 DIFERENCIA")
-                diferencia = cuota_sim['importe'] - cuota_base['importe']
-                color_delta = "normal" if diferencia < 0 else "inverse"
-                st.metric(
-                    "Cambio",
-                    f"{abs(diferencia):,.2f} €",
-                    delta=f"{diferencia:,.2f} €",
-                    delta_color=color_delta
-                )
-                
-                if diferencia < 0:
-                    st.success(f"✅ Ahorrarías {abs(diferencia):,.2f} €")
-                elif diferencia > 0:
-                    st.error(f"⚠️ Pagarías {diferencia:,.2f} € más")
-                else:
-                    st.info("Sin cambios")
+                st.metric("Diferencia", f"{abs(diferencia):,.0f} €", delta=f"{diferencia:,.0f} €")
+
+elif menu == "📈 Historial":
+    st.markdown("""
+    <div class="hero-header">
+        <h1>📈 Historial</h1>
+        <p>Tus cálculos anteriores</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    if len(st.session_state.historial_calculos) == 0:
+        st.info("🔍 Aún no has realizado cálculos")
+    else:
+        st.info(f"📊 {len(st.session_state.historial_calculos)} cálculo(s) guardado(s)")
+        
+        for calculo in reversed(st.session_state.historial_calculos):
+            fecha = calculo['fecha'].strftime('%d/%m/%Y %H:%M')
+            resultado = calculo['resultado']
+            cuota = resultado['cuota_diferencial']
             
-            # GRÁFICO COMPARATIVO
-            st.subheader("📊 Comparativa Visual")
+            with st.expander(f"🗓️ {fecha} - {cuota['resultado']}: {cuota['importe']:,.2f} €"):
+                col_h1, col_h2, col_h3 = st.columns(3)
+                with col_h1:
+                    st.metric("Resultado", f"{cuota['importe']:,.2f} €")
+                with col_h2:
+                    st.metric("Base", f"{resultado['resumen']['base_imponible_general']:,.2f} €")
+                with col_h3:
+                    st.metric("Tipo Medio", f"{resultado['resumen']['tipo_medio']:.2f}%")
+
+elif menu == "💡 Guía":
+    st.markdown("""
+    <div class="hero-header">
+        <h1>💡 Guía Rápida</h1>
+        <p>Conceptos clave del IRPF</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    tab1, tab2 = st.tabs(["📚 Conceptos", "❓ FAQ"])
+    
+    with tab1:
+        with st.expander("🔍 ¿Qué es el IRPF?"):
+            st.write("""
+            **Impuesto progresivo:**
+            - 📊 A mayor renta, mayor %
+            - 🏛️ 50% Estatal + 50% Autonómico
+            - 🗓️ Declaración anual (abril-junio)
+            """)
+        
+        with st.expander("⚖️ Tramos 2024"):
+            st.write("""
+            | Base Imponible | Tipo Total |
+            |----------------|------------|
+            | Hasta 12.450€  | 19% |
+            | 12.450-20.200€ | 24% |
+            | 20.200-35.200€ | 30% |
+            | 35.200-60.000€ | 37% |
+            | 60.000-300.000€| 45% |
+            | >300.000€      | 47% |
+            """)
+        
+        with st.expander("💡 Deducciones principales"):
+            st.write("""
+            **Estatales:**
+            - 🏦 Plan pensiones: hasta 1.500€
+            - ❤️ Donaciones: 80% primeros 150€
+            - 👶 Maternidad: 1.200€/hijo <3 años
             
-            fig_comp = go.Figure()
-            
-            fig_comp.add_trace(go.Bar(
-                name='Escenario Base',
-                x=['Ingresos', 'Impuestos', 'Deducciones'],
-                y=[
-                    resultado_base['resumen']['base_imponible_general'],
-                    resultado_base['cuotas_liquidas']['total'],
-                    resultado_base['deducciones']['total_estatal'] + resultado_base['deducciones']['total_autonomica']
-                ],
-                marker_color='#667eea'
-            ))
-            
-            fig_comp.add_trace(go.Bar(
-                name='Escenario Simulado',
-                x=['Ingresos', 'Impuestos', 'Deducciones'],
-                y=[
-                    resultado_sim['resumen']['base_imponible_general'],
-                    resultado_sim['cuotas_liquidas']['total'],
-                    resultado_sim['deducciones']['total_estatal'] + resultado_sim['deducciones']['total_autonomica']
-                ],
-                marker_color='#51cf66'
-            ))
-            
-            fig_comp.update_layout(
-                barmode='group',
-                height=400,
-                hovermode='x unified'
-            )
-            
-            st.plotly_chart(fig_comp, use_container_width=True)
-            
-            # DETALLES DE CAMBIOS
-            with st.expander("🔍 Ver detalles de los cambios"):
-                st.write("**Cambios en tus datos:**")
-                if salario_sim != datos_base['salario']:
-                    st.write(f"- Salario: {datos_base['salario']:,.0f} € → {salario_sim:,.0f} € ({salario_sim - datos_base['salario']:+,.0f} €)")
-                if alquiler_sim != datos_base['alquiler_ingresos']:
-                    st.write(f"- Alquiler: {datos_base['alquiler_ingresos']:,.0f} € → {alquiler_sim:,.0f} € ({alquiler_sim - datos_base['alquiler_ingresos']:+,.0f} €)")
-                if pension_sim != datos_base['plan_pensiones']:
-                    st.write(f"- Plan pensiones: {datos_base['plan_pensiones']:,.0f} € → {pension_sim:,.0f} € ({pension_sim - datos_base['plan_pensiones']:+,.0f} €)")
-                if donaciones_sim != datos_base['donaciones']:
-                    st.write(f"- Donaciones: {datos_base['donaciones']:,.0f} € → {donaciones_sim:,.0f} € ({donaciones_sim - datos_base['donaciones']:+,.0f} €)")
+            **Autonómicas:** Varían según comunidad
+            """)
+    
+    with tab2:
+        with st.expander("❓ ¿Estoy obligado?"):
+            st.write("""
+            **SÍ si tienes:**
+            - Trabajo >22.000€ (un pagador)
+            - Trabajo >15.000€ (varios)
+            - Capital >1.600€
+            - Alquileres >1.000€
+            """)
+        
+        with st.expander("❓ ¿Cuándo declaro?"):
+            st.write("📅 Del 3 abril al 1 julio 2025")
+        
+        with st.expander("❓ ¿Qué documentos necesito?"):
+            st.write("""
+            ✅ Certificado retenciones trabajo
+            ✅ Certificados bancarios
+            ✅ Facturas alquiler (si aplica)
+            ✅ Justificantes deducciones
+            """)
 
 # Footer
 st.markdown("---")
 st.markdown("""
-<div style='text-align: center; color: #666; padding: 20px;'>
-    <p>⚠️ Esta calculadora es orientativa. Para casos complejos, consulta con un asesor fiscal profesional.</p>
-    <p>📅 Cálculos basados en normativa IRPF 2024</p>
-    <p>🚀 Versión 2.0 - Con simulador, optimizador y exportación</p>
+<div style='text-align: center; color: #94a3b8; padding: 2rem;'>
+    <p style='font-weight: 600; margin-bottom: 0.5rem; color: #e2e8f0;'>💼 TaxCalc Pro</p>
+    <p style='font-size: 0.875rem;'>Calculadora profesional IRPF 2024</p>
+    <p style='font-size: 0.75rem; margin-top: 1rem;'>v3.0 Professional Edition</p>
 </div>
 """, unsafe_allow_html=True)
